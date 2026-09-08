@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#061323">
+<title>نظام إدارة المخزن</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f4f6f8;color:#17202a;font-family:Arial,sans-serif}
+header{padding:14px;background:#17202a;color:#fff;position:sticky;top:0;z-index:5}
+h1{margin:0;font-size:22px}
+.wrap{padding:12px;max-width:900px;margin:auto}
+.card{background:#fff;border:1px solid #e1e5e8;border-radius:18px;padding:14px;margin-bottom:14px;box-shadow:0 4px 14px #00000010}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{text-align:center;background:#f4f6f8;border-radius:14px;padding:12px}
+.stat b{display:block;font-size:22px;margin-top:5px}
+input,select,button{width:100%;padding:12px;border-radius:10px;border:1px solid #415267;background:#fff;color:#17202a;font-size:16px}
+button{cursor:pointer;background:#17202a;color:#fff;border:none}
+button:active{transform:scale(.98)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.search{margin-bottom:10px}
+table{width:100%;border-collapse:collapse;min-width:650px}
+th,td{border:1px solid #34485d;padding:9px;text-align:center}
+th{background:#08192b}
+.tablewrap{overflow:auto}
+.in{color:#8ee7a1}.out{color:#ff9b9b}
+.small{font-size:12px;color:#aab8c7}
+.danger{background:#b42318}
+.hidden{display:none}
+.empty{text-align:center;color:#aab8c7;padding:20px}
+</style>
+
+<style id="colorUpgrade">
+:root{
+  --ink:#172033;
+  --muted:#667085;
+  --line:#d9e1ec;
+  --panel:#ffffff;
+  --bg:#f4f7fb;
+  --accent:#2563eb;
+}
+body{background:var(--bg)!important;color:var(--ink)!important;}
+h1,h2,h3,h4,strong,b,label{color:var(--ink)!important;}
+p,small,.muted{color:var(--muted)!important;}
+input,select,textarea{
+  color:var(--ink)!important;background:#fff!important;
+  border-color:var(--line)!important;
+}
+input::placeholder{color:#8b96a8!important;opacity:1;}
+button{font-weight:600;}
+.card,.panel,.box,.stat,.summary{
+  color:var(--ink)!important;
+}
+table,th,td{color:var(--ink)!important;}
+th{background:#eef3f9!important;}
+</style>
+
+
+<style id="blueWhiteTheme">
+:root{
+  --blue:#1565c0;
+  --blue-dark:#0d47a1;
+  --blue-light:#eaf4ff;
+  --white:#ffffff;
+  --text:#102a43;
+  --border:#cfe0f2;
+}
+body{background:#f5f9fd!important;color:var(--text)!important;}
+header,.header,.topbar{background:linear-gradient(135deg,var(--blue-dark),var(--blue))!important;color:#fff!important;}
+header *, .header *, .topbar *{color:#fff!important;}
+.card,.panel,.box,.stat,.summary,section{background:var(--white)!important;border-color:var(--border)!important;}
+h1,h2,h3,h4{color:var(--blue-dark)!important;}
+input,select,textarea{background:#fff!important;color:var(--text)!important;border:1px solid var(--border)!important;}
+button{background:var(--blue)!important;color:#fff!important;border-color:var(--blue)!important;}
+button:hover{background:var(--blue-dark)!important;}
+table th{background:var(--blue-light)!important;color:var(--blue-dark)!important;}
+table td{color:var(--text)!important;border-color:var(--border)!important;}
+#securityTools button{background:var(--blue-dark)!important;color:#fff!important;}
+.archive-code-badge{background:var(--blue-light)!important;color:var(--blue-dark)!important;border-color:var(--border)!important;}
+</style>
+
+
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1565c0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="نظام إدارة المخزن">
+<link rel="apple-touch-icon" href="icon.svg">
+
+</head>
+<body>
+<header><div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+<h1>📦 نظام إدارة المخزن</h1>
+<button onclick="toggleMenu()" style="width:auto;padding:8px 12px;font-size:22px">☰</button>
+</div>
+<div id="topMenu" class="card hidden" style="position:absolute;left:12px;right:12px;top:62px;margin:0;z-index:10">
+<button onclick="showCategories()">📂 أنواع الأصناف</button><br><br><button onclick="showArchive()">📂 الأنواع</button><br><br><button class="danger" onclick="clearAll()">⚠️ حذف كل بيانات البرنامج</button>
+</div>
+</header>
+<div class="wrap"><div id="categoriesView" class="hidden"><div class="card"><h3>📂 أنواع الأصناف الرئيسية</h3><div id="categoriesList"></div><br><button onclick="closeCategories()">⬅️ رجوع</button></div><div id="subCategoriesCard" class="card hidden"><h3 id="categoryTitle"></h3><div id="subCategoriesList"></div></div></div>
+
+<div class="card stats">
+<div class="stat">الأصناف<b id="itemsCount">٠</b></div>
+<div class="stat">إجمالي الكمية<b id="totalQty">٠</b></div>
+<div class="stat">الأنواع<b id="movesCount">٠</b></div>
+</div>
+
+<div class="card">
+<h3>إضافة صنف جديد</h3>
+<div class="grid">
+<input id="name" placeholder="اسم الصنف">
+<input id="code" placeholder="كود">
+<input id="type" placeholder="النوع">
+</div><br>
+<input id="qty" type="number" min="0" placeholder="الكمية الابتدائية">
+<br><br><button onclick="addItem()">➕ إضافة الصنف</button>
+</div>
+
+<div class="card">
+<h3>حركة مخزن</h3>
+<select id="moveType" onchange="renderSelect()"><option value="">اختر النوع أولاً</option></select><br><br><select id="itemSelect"><option>اختر النوع أولاً</option></select><br><br>
+<div class="actions">
+<button onclick="moveItem('in')">➕ إضافة للمخزن</button>
+<button onclick="moveItem('out')">➖ صرف من المخزن</button>
+</div><br>
+<input id="moveQty" type="number" min="1" placeholder="الكمية">
+<br><br><input id="person" placeholder="اسم المستلم / المسؤول">
+</div>
+
+<div class="card">
+<h3>الأصناف</h3>
+<input class="search" id="search" placeholder="🔎 ابحث بالاسم أو الكود أو النوع" oninput="renderItems()">
+<div class="tablewrap"><table>
+<thead><tr><th>الصنف</th><th>الكود</th><th>النوع</th><th>الرصيد</th><th>إجراء</th></tr></thead>
+<tbody id="itemsTable"></tbody>
+</table></div>
+</div>
+
+<div class="card">
+<h3>📚 الأرشيف</h3>
+<div class="grid">
+<input id="dateFrom" type="date" onchange="renderArchive()">
+<input id="dateTo" type="date" onchange="renderArchive()">
+</div><br>
+<button onclick="clearFilters()">إلغاء الفلترة</button><br><br>
+<div class="tablewrap"><table>
+<thead><tr><th>التاريخ</th><th>الصنف</th><th>الحركة</th><th>الكمية</th><th>المسؤول</th></tr></thead>
+<tbody id="archiveTable"></tbody>
+</table></div>
+</div>
+
+
+</div>
+
+<script>
+const KEY='warehouse_archive_v2';
+const old=JSON.parse(localStorage.getItem('warehouse_archive_v1')||'null');
+const categories={};
+let db=JSON.parse(localStorage.getItem(KEY)||'null') || old || {items:[],moves:[]};
+
+const ar=n=>String(n).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
+function save(){localStorage.setItem(KEY,JSON.stringify(db));renderAll()}
+function addItem(){
+ let name=document.getElementById('name').value.trim(),code=document.getElementById('code').value.trim();
+ let type=document.getElementById('type').value.trim();
+ let qty=Number(document.getElementById('qty').value||0);
+ if(!name){alert('اكتب اسم الصنف');return}
+ if(db.items.some(x=>x.code&&code&&x.code===code)){alert('الكود موجود بالفعل');return}
+ let id=Date.now();db.items.push({id,name,code,type,qty});
+ db.moves.push({date:new Date().toISOString(),itemId:id,type:'الكمية',qty,person:'-'});
+ document.getElementById('name').value='';document.getElementById('code').value='';document.getElementById('type').value='';document.getElementById('qty').value='';
+ save();
+}
+function moveItem(type){
+ let id=Number(document.getElementById('itemSelect').value),q=Number(document.getElementById('moveQty').value),person=document.getElementById('person').value.trim()||'-';
+ let item=db.items.find(x=>x.id===id);
+ if(!document.getElementById('moveType').value){alert('اختر النوع أولاً');return}
+ if(!item){alert('اختر الصنف');return}
+ if(!q||q<1){alert('اكتب الكمية');return}
+ if(type==='out'&&q>item.qty){alert('الكمية المطلوبة أكبر من الرصيد الحالي');return}
+ item.qty += type==='in'?q:-q;
+ db.moves.push({date:new Date().toISOString(),itemId:id,type:type==='in'?'إضافة':'صرف',qty:q,person});
+ document.getElementById('moveQty').value='';document.getElementById('person').value='';save();
+}
+function renderSelect(){
+ let ts=document.getElementById('moveType'), selected=ts.value;
+ let types=[...new Set(db.items.map(x=>(x.type||'غير محدد').trim()||'غير محدد'))];
+ ts.innerHTML='<option value="">اختر النوع أولاً</option>'+types.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join(''); ts.value=selected;
+ let s=document.getElementById('itemSelect');
+ let arr=selected?db.items.filter(x=>((x.type||'غير محدد').trim()||'غير محدد')===selected):[];
+ s.innerHTML=arr.length?'<option value="">اختر الصنف</option>'+arr.map(x=>`<option value="${x.id}">${x.name} — الرصيد ${ar(x.qty)}</option>`).join(''):'<option value="">'+(selected?'لا توجد أصناف في هذا النوع':'اختر النوع أولاً')+'</option>';
+}
+function renderItems(){
+ let q=document.getElementById('search').value.trim().toLowerCase();
+ let arr=db.items.filter(x=>(x.name+' '+x.code+' '+(x.type||'')).toLowerCase().includes(q));
+ document.getElementById('itemsTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.code||'-')}</td><td>${esc(x.type||'-')}</td><td><b>${ar(x.qty)}</b></td><td><button onclick="deleteItem(${x.id})">حذف</button></td></tr>`).join(''):'<tr><td colspan="5" class="empty">لا توجد أصناف</td></tr>';
+}
+function renderArchive(){
+ let f=document.getElementById('dateFrom').value,t=document.getElementById('dateTo').value;
+ let arr=db.moves.filter(m=>{let d=m.date.slice(0,10);return(!f||d>=f)&&(!t||d<=t)}).slice().reverse();
+ document.getElementById('archiveTable').innerHTML=arr.length?arr.map(m=>{let x=db.items.find(i=>i.id===m.itemId);return `<tr><td>${new Date(m.date).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'})}</td><td>${esc(x?.name||'صنف محذوف')}</td><td class="${m.type==='إضافة'?'in':m.type==='صرف'?'out':''}">${m.type}</td><td>${ar(m.qty)}</td><td>${esc(m.person)}</td></tr>`}).join(''):'<tr><td colspan="5" class="empty">لا توجد حركات</td></tr>';
+}
+
+function showCategories(){document.querySelectorAll('.wrap > .card').forEach(x=>x.classList.add('hidden'));document.getElementById('categoriesView').classList.remove('hidden');document.getElementById('topMenu').classList.add('hidden');renderCategories()}
+function closeCategories(){document.getElementById('categoriesView').classList.add('hidden');document.querySelectorAll('.wrap > .card').forEach(x=>x.classList.remove('hidden'));}
+function renderCategories(){let types=[...new Set(db.items.map(x=>(x.type||'غير محدد').trim()||'غير محدد'))];let box=document.getElementById('categoriesList');box.innerHTML=types.length?types.map(t=>`<button style="margin-bottom:8px;text-align:right" onclick="openCategory(${JSON.stringify(t).replace(/"/g,'&quot;')})">📦 ${esc(t)} <span class="small">(${ar(db.items.filter(x=>((x.type||'غير محدد').trim()||'غير محدد')===t).length)} أصناف)</span></button>`).join(''):'<div class="empty">لا توجد أنواع أصناف بعد</div>'}
+function openCategory(t){document.getElementById('subCategoriesCard').classList.remove('hidden');document.getElementById('categoryTitle').textContent='📦 '+t;let arr=db.items.filter(x=>((x.type||'غير محدد').trim()||'غير محدد')===t);document.getElementById('subCategoriesList').innerHTML=arr.map(x=>`<div style="padding:12px;border-bottom:1px solid #eee"><b>${esc(x.name)}</b><br><span class="small">الكود: ${esc(x.code||'-')} — الكمية: ${ar(x.qty)}</span></div>`).join('')}
+
+function renderAll(){
+ document.getElementById('itemsCount').textContent=ar(db.items.length);
+ document.getElementById('totalQty').textContent=ar(db.items.reduce((a,x)=>a+Number(x.qty||0),0));
+ document.getElementById('movesCount').textContent=ar(db.moves.length);
+ renderSelect();renderItems();renderArchive();
+}
+function deleteItem(id){
+ if(!confirm('حذف الصنف؟ ستظل حركاته في الأرشيف.'))return;
+ db.items=db.items.filter(x=>x.id!==id);save();
+}
+function showArchive(){document.getElementById('topMenu').classList.add('hidden');document.querySelector('.card:last-of-type').scrollIntoView({behavior:'smooth'});}
+function clearFilters(){document.getElementById('dateFrom').value='';document.getElementById('dateTo').value='';renderArchive()}
+function toggleMenu(){document.getElementById('topMenu').classList.toggle('hidden')}
+function clearAll(){if(confirm('سيتم حذف جميع الأصناف والحركات نهائياً. متأكد؟')){db={items:[],moves:[]};save()}}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+renderAll();
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // Find visible elements containing "الحركات" near summary/header area and rename the first one.
+  const all = Array.from(document.querySelectorAll('button,a,div,span,h1,h2,h3,p'));
+  let changed = false;
+  for (const el of all) {
+    const t = (el.textContent || '').trim();
+    if (!changed && (t === 'الحركات' || t === '📋 الحركات' || t.includes('الحركات')) &&
+        !el.closest('.menu, .sidebar, #menu, [id*="menu"]')) {
+      el.textContent = '📂 الأنواع';
+      el.style.cursor = 'pointer';
+      el.onclick = function (e) {
+        e.preventDefault();
+        showTypesPanel();
+      };
+      changed = true;
+    }
+  }
+
+  function getData(){
+    const keys = ['inventory','items','warehouse','storeData','badal_v1'];
+    for (const k of keys) {
+      try { const v = JSON.parse(localStorage.getItem(k)); if(v) return v; } catch(e){}
+    }
+    return null;
+  }
+
+  function showTypesPanel(){
+    let panel = document.getElementById('typesOverlay');
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.id = 'typesOverlay';
+      panel.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;padding:18px;overflow:auto;direction:rtl;';
+      const box = document.createElement('div');
+      box.style.cssText = 'max-width:650px;margin:30px auto;background:#fff;color:#111;border-radius:18px;padding:20px;box-shadow:0 10px 35px rgba(0,0,0,.3);';
+      box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px"><h2 style="margin:0">📂 أنواع الأصناف</h2><button id="closeTypes" style="border:0;border-radius:10px;padding:8px 14px;cursor:pointer">إغلاق</button></div><div id="typesList"></div>';
+      panel.appendChild(box);
+      document.body.appendChild(panel);
+      box.querySelector('#closeTypes').onclick = ()=>panel.remove();
+    }
+    const data = getData();
+    let arr = [];
+    if (Array.isArray(data)) arr = data;
+    else if (data && Array.isArray(data.items)) arr = data.items;
+    else if (data && Array.isArray(data.products)) arr = data.products;
+    const map = {};
+    arr.forEach(x=>{
+      const type = x.type || x.category || x['النوع'] || 'بدون نوع';
+      const qty = Number(x.quantity || x.qty || x['الكمية'] || 0);
+      if(!map[type]) map[type] = {qty:0, items:[]};
+      map[type].qty += qty; map[type].items.push(x);
+    });
+    const list = panel.querySelector('#typesList');
+    const names = Object.keys(map);
+    if (!names.length) {
+      list.innerHTML = '<p style="text-align:center;padding:20px">لا توجد أنواع مسجلة حاليًا.</p>';
+      return;
+    }
+    list.innerHTML = names.map(n=>{
+      const safe = htmlEscape(n);
+      return '<button class="typeBtn" data-type="'+safe+'" style="width:100%;text-align:right;padding:14px;margin:7px 0;border:1px solid #ddd;background:#f7f7f7;border-radius:12px;cursor:pointer;font-size:16px">📦 '+safe+' <span style="float:left">إجمالي الكمية: '+map[n].qty+'</span></button>';
+    }).join('');
+    list.querySelectorAll('.typeBtn').forEach(btn=>{
+      btn.onclick = ()=>{
+        const n = btn.dataset.type;
+        const info = map[n];
+        list.innerHTML = '<button id="backTypes" style="border:0;border-radius:8px;padding:8px 12px;cursor:pointer;margin-bottom:12px">← رجوع</button><h3>'+htmlEscape(n)+'</h3>'+
+          info.items.map(x=>{
+            const name=x.name||x.itemName||x['اسم الصنف']||'صنف';
+            const q=x.quantity||x.qty||x['الكمية']||0;
+            return '<div style="padding:12px;border-bottom:1px solid #eee">📦 '+htmlEscape(String(name))+' <span style="float:left">الكمية: '+htmlEscape(String(q))+'</span></div>';
+          }).join('');
+        document.getElementById('backTypes').onclick=()=>showTypesPanel();
+      };
+    });
+  }
+  function htmlEscape(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+});
+</script>
+
+
+<style>
+#securityTools{position:fixed;bottom:18px;left:18px;z-index:9998;display:flex;gap:8px}
+#securityTools button{border:0;border-radius:12px;padding:10px 14px;cursor:pointer;font-family:inherit;font-size:14px}
+#warehouseCodeSearch{margin:14px 0;padding:12px;border:1px solid #ddd;border-radius:12px;width:100%;font-size:16px;direction:rtl}
+#searchCodeResult{margin-top:8px}
+.secOverlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100000;display:flex;align-items:center;justify-content:center;padding:18px;direction:rtl}
+.secBox{background:#fff;color:#111;width:min(430px,100%);border-radius:18px;padding:20px;box-shadow:0 15px 45px rgba(0,0,0,.35)}
+.secBox h3{margin-top:0}.secBox input{width:100%;padding:13px;margin:8px 0;border:1px solid #ccc;border-radius:10px;font-size:17px}
+.secActions{display:flex;gap:8px;margin-top:10px}.secActions button{flex:1;padding:11px;border:0;border-radius:10px;cursor:pointer;font-size:15px}
+</style>
+
+<script>
+(function(){
+const DEFAULT_PASSWORD='1234';
+function getPass(){return localStorage.getItem('warehouse_admin_password')||DEFAULT_PASSWORD;}
+function makeModal(title, bodyHTML){
+  const ov=document.createElement('div'); ov.className='secOverlay';
+  ov.innerHTML='<div class="secBox"><h3>'+title+'</h3>'+bodyHTML+'</div>';
+  document.body.appendChild(ov); return ov;
+}
+function notify(msg){ alert(msg); }
+
+function clearAllData(){
+ const ov=makeModal('🗑️ حذف كل البيانات',
+   '<p>اكتب كلمة المرور لتأكيد حذف جميع البيانات.</p>'+
+   '<input id="delPass" type="password" placeholder="كلمة المرور" inputmode="text" autocomplete="current-password">'+
+   '<div class="secActions"><button id="delOk">تأكيد الحذف</button><button id="delCancel">إلغاء</button></div>');
+ const inp=ov.querySelector('#delPass'); setTimeout(()=>inp.focus(),100);
+ ov.querySelector('#delCancel').onclick=()=>ov.remove();
+ ov.querySelector('#delOk').onclick=()=>{
+   if(inp.value!==getPass()){notify('❌ كلمة المرور غير صحيحة'); inp.focus(); return;}
+   if(!confirm('هل أنت متأكد من حذف كل البيانات؟ لا يمكن التراجع.')) return;
+   const keys=['inventory','items','warehouse','storeData','badal_v1','warehouseData','products','movements','history'];
+   keys.forEach(k=>localStorage.removeItem(k));
+   // Preserve only password and remove other app-related local data safely.
+   const pass=getPass();
+   localStorage.clear();
+   localStorage.setItem('warehouse_admin_password',pass);
+   ov.remove(); notify('✅ تم حذف جميع البيانات بنجاح');
+   location.reload();
+ };
+}
+
+function changePassword(){
+ const ov=makeModal('🔐 تغيير كلمة المرور',
+  '<label>كلمة المرور القديمة</label><input id="oldP" type="password" placeholder="اكتب كلمة المرور القديمة" autocomplete="current-password">'+
+  '<label>كلمة المرور الجديدة</label><input id="newP" type="password" placeholder="اكتب كلمة المرور الجديدة" autocomplete="new-password">'+
+  '<label>تأكيد كلمة المرور الجديدة</label><input id="newP2" type="password" placeholder="أعد كتابة كلمة المرور الجديدة" autocomplete="new-password">'+
+  '<div class="secActions"><button id="passOk">حفظ</button><button id="passCancel">إلغاء</button></div>');
+ setTimeout(()=>ov.querySelector('#oldP').focus(),100);
+ ov.querySelector('#passCancel').onclick=()=>ov.remove();
+ ov.querySelector('#passOk').onclick=()=>{
+   const old=ov.querySelector('#oldP').value, n=ov.querySelector('#newP').value, n2=ov.querySelector('#newP2').value;
+   if(old!==getPass()) return notify('❌ كلمة المرور القديمة غير صحيحة');
+   if(!n) return notify('⚠️ اكتب كلمة المرور الجديدة');
+   if(n!==n2) return notify('⚠️ كلمة المرور الجديدة غير متطابقة');
+   localStorage.setItem('warehouse_admin_password',n); ov.remove(); notify('✅ تم تغيير كلمة المرور بنجاح');
+ };
+}
+
+function findArchiveContainer(){
+ const candidates=[...document.querySelectorAll('section,div')];
+ return candidates.find(el=>/الأرشيف/.test((el.querySelector('h1,h2,h3,h4')||{}).textContent||'')) || null;
+}
+function getItems(){
+ const keys=['inventory','items','warehouse','storeData','warehouseData','products'];
+ for(const k of keys){
+  try{
+   const d=JSON.parse(localStorage.getItem(k));
+   if(Array.isArray(d)) return d;
+   if(d&&Array.isArray(d.items)) return d.items;
+   if(d&&Array.isArray(d.products)) return d.products;
+  }catch(e){}
+ }
+ return [];
+}
+function setupCodeSearch(){
+ const target=findArchiveContainer();
+ if(!target) return;
+ if(document.getElementById('warehouseCodeSearch')) return;
+ const wrap=document.createElement('div');
+ wrap.innerHTML='<input id="warehouseCodeSearch" placeholder="🔎 ابحث بكود" inputmode="text"><div id="searchCodeResult"></div>';
+ target.appendChild(wrap);
+ const input=wrap.querySelector('input'), result=wrap.querySelector('#searchCodeResult');
+ input.addEventListener('input',()=>{
+  const q=input.value.trim().toLowerCase();
+  if(!q){result.innerHTML='';return;}
+  const matches=getItems().filter(x=>String(x.code||x.itemCode||x.id||x["كود"]||'').toLowerCase().includes(q));
+  if(!matches.length){result.innerHTML='<p>لا يوجد صنف بهذا الكود.</p>';return;}
+  result.innerHTML=matches.map(x=>{
+   const name=x.name||x.itemName||x["اسم الصنف"]||'صنف';
+   const code=x.code||x.itemCode||x.id||x["كود"]||'';
+   const qty=x.quantity||x.qty||x["الكمية"]||0;
+   const type=x.type||x.category||x["النوع"]||'';
+   return '<div style="padding:12px;border:1px solid #ddd;border-radius:10px;margin-top:8px">📦 <b>'+name+'</b><br>الكود: '+code+' — النوع: '+type+' — الكمية: '+qty+'</div>';
+  }).join('');
+ });
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+ const tools=document.createElement('div'); tools.id='securityTools';
+ tools.innerHTML='<button id="changePassBtn">🔐 تغيير كلمة المرور</button><button id="deleteAllBtn">🗑️ حذف كل البيانات</button>';
+ document.body.appendChild(tools);
+ document.getElementById('deleteAllBtn').onclick=clearAllData;
+ document.getElementById('changePassBtn').onclick=changePassword;
+ setupCodeSearch();
+});
+})();
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  // Hide any floating password button left from previous version
+  const oldTools=document.getElementById('securityTools');
+  if(oldTools) oldTools.remove();
+
+  // Find a likely three-lines menu container and add the password option.
+  const menuCandidates=[...document.querySelectorAll('.menu,.menu-content,.dropdown,.dropdown-menu,.sidebar,nav,ul')];
+  let menu=menuCandidates.find(el=>el.querySelector('button,a') && /الحركات|الأنواع|حذف|إعدادات/.test(el.textContent||''));
+  if(!menu) menu=menuCandidates.find(el=>el.querySelector('button,a'));
+
+  if(menu && !document.getElementById('menuChangePassword')){
+    const btn=document.createElement('button');
+    btn.id='menuChangePassword';
+    btn.type='button';
+    btn.textContent='🔐 تغيير كلمة المرور';
+    btn.style.cssText='width:100%;text-align:right;padding:12px;border:0;background:transparent;cursor:pointer;font:inherit;color:inherit;';
+    btn.addEventListener('click', function(){
+      if(typeof changePassword==='function') changePassword();
+      else {
+        // Use click on any legacy hidden button if available
+        const legacy=document.getElementById('changePassBtn');
+        if(legacy) legacy.click();
+      }
+    });
+    menu.appendChild(btn);
+  }
+
+  // If the existing script scoped changePassword privately, provide a local implementation.
+  if(!window.changePassword){
+    window.changePassword=function(){
+      const ov=document.createElement('div');
+      ov.className='secOverlay';
+      ov.innerHTML='<div class="secBox"><h3>🔐 تغيير كلمة المرور</h3>'+
+      '<label>كلمة المرور القديمة</label><input id="oldP2" type="password" placeholder="اكتب كلمة المرور القديمة" autocomplete="current-password">'+
+      '<label>كلمة المرور الجديدة</label><input id="newP3" type="password" placeholder="اكتب كلمة المرور الجديدة" autocomplete="new-password">'+
+      '<label>تأكيد كلمة المرور الجديدة</label><input id="newP4" type="password" placeholder="أعد كتابة كلمة المرور الجديدة" autocomplete="new-password">'+
+      '<div class="secActions"><button id="saveNewPass">حفظ</button><button id="cancelNewPass">إلغاء</button></div></div>';
+      document.body.appendChild(ov);
+      setTimeout(()=>ov.querySelector('#oldP2').focus(),100);
+      ov.querySelector('#cancelNewPass').onclick=()=>ov.remove();
+      ov.querySelector('#saveNewPass').onclick=()=>{
+        const current=localStorage.getItem('warehouse_admin_password')||'1234';
+        const old=ov.querySelector('#oldP2').value;
+        const n=ov.querySelector('#newP3').value;
+        const c=ov.querySelector('#newP4').value;
+        if(old!==current){alert('❌ كلمة المرور القديمة غير صحيحة');return;}
+        if(!n){alert('⚠️ اكتب كلمة المرور الجديدة');return;}
+        if(n!==c){alert('⚠️ كلمة المرور الجديدة غير متطابقة');return;}
+        localStorage.setItem('warehouse_admin_password',n);
+        ov.remove();alert('✅ تم تغيير كلمة المرور بنجاح');
+      };
+    };
+  }
+
+  // Retry once after menu animations/rendering.
+  setTimeout(()=>{
+    if(!document.getElementById('menuChangePassword')){
+      const buttons=[...document.querySelectorAll('button,a')];
+      const anchor=buttons.find(b=>/الحركات|الأنواع/.test(b.textContent||''));
+      if(anchor && anchor.parentElement){
+        const b=document.createElement('button');
+        b.id='menuChangePassword'; b.type='button'; b.textContent='🔐 تغيير كلمة المرور';
+        b.style.cssText='display:block;width:100%;text-align:right;padding:12px;border:0;background:transparent;cursor:pointer;font:inherit;color:inherit;';
+        b.onclick=()=>window.changePassword();
+        anchor.parentElement.appendChild(b);
+      }
+    }
+  },500);
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  function safeDeleteAll(){
+    const old = document.getElementById('safeDeleteOverlay');
+    if(old) old.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'safeDeleteOverlay';
+    overlay.className = 'secOverlay';
+    overlay.innerHTML = `
+      <div class="secBox">
+        <h3>🗑️ حذف كل البيانات</h3>
+        <p>لن يتم حذف أي بيانات إلا بعد كتابة كلمة المرور الصحيحة.</p>
+        <input id="safeDeletePassword" type="password" placeholder="اكتب كلمة المرور" autocomplete="current-password">
+        <div class="secActions">
+          <button id="safeDeleteConfirm">تأكيد</button>
+          <button id="safeDeleteCancel">إلغاء</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const input = document.getElementById('safeDeletePassword');
+    setTimeout(() => input.focus(), 150);
+
+    document.getElementById('safeDeleteCancel').onclick = () => overlay.remove();
+
+    document.getElementById('safeDeleteConfirm').onclick = () => {
+      const currentPassword = localStorage.getItem('warehouse_admin_password') || '1234';
+
+      // Absolutely no deletion before password validation.
+      if (input.value !== currentPassword) {
+        alert('❌ كلمة المرور غير صحيحة. لم يتم حذف أي بيانات.');
+        input.value = '';
+        input.focus();
+        return;
+      }
+
+      // Second confirmation after successful password.
+      if (!confirm('⚠️ كلمة المرور صحيحة. هل أنت متأكد أنك تريد حذف جميع بيانات المخزن؟')) {
+        return;
+      }
+
+      // Keep password and delete app data only after both checks.
+      const password = currentPassword;
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+      keys.forEach(k => {
+        if (k !== 'warehouse_admin_password') localStorage.removeItem(k);
+      });
+      localStorage.setItem('warehouse_admin_password', password);
+
+      overlay.remove();
+      alert('✅ تم حذف جميع البيانات بنجاح.');
+      location.reload();
+    };
+  }
+
+  // Replace all buttons/links related to deleting all data.
+  document.querySelectorAll('button,a').forEach(el => {
+    if ((el.textContent || '').includes('حذف كل البيانات')) {
+      el.onclick = function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        safeDeleteAll();
+        return false;
+      };
+    }
+  });
+
+  // If the app has a known delete button id, protect it too.
+  ['deleteAllBtn','deleteAllData','clearAllBtn'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.onclick = function(e){ e.preventDefault(); safeDeleteAll(); };
+  });
+});
+</script>
+
+<script>
+(function(){
+function secureDelete(){
+ const p=prompt("🔐 اكتب كلمة المرور لتأكيد حذف كل البيانات:");
+ const correct=localStorage.getItem("warehouse_admin_password")||"1234";
+ if(p!==correct){ alert("❌ كلمة المرور غير صحيحة. لم يتم حذف أي بيانات."); return; }
+ if(!confirm("⚠️ كلمة المرور صحيحة. هل أنت متأكد من الحذف النهائي؟")) return;
+ const pass=correct, keys=[];
+ for(let i=0;i<localStorage.length;i++) keys.push(localStorage.key(i));
+ keys.forEach(k=>{if(k!=="warehouse_admin_password") localStorage.removeItem(k)});
+ localStorage.setItem("warehouse_admin_password",pass);
+ alert("✅ تم حذف البيانات.");
+ location.reload();
+}
+document.addEventListener("click",function(e){
+ let x=e.target;
+ while(x&&x!==document.body){
+  const t=(x.textContent||"").trim(), id=(x.id||"").toLowerCase();
+  if(t.includes("حذف كل البيانات")||t.includes("مسح كل البيانات")||id.includes("deleteall")||id.includes("clearall")){
+   e.preventDefault();e.stopImmediatePropagation();secureDelete();return false;
+  } x=x.parentElement;
+ }
+},true);
+})();
+</script>
+<script>
+/* إصلاح نهائي للزر الأصلي: حذف كل بيانات البرنامج */
+window.clearAll = function(){
+  const password = prompt("🔐 اكتب كلمة المرور لحذف جميع بيانات البرنامج:");
+  const correctPassword = localStorage.getItem("warehouse_admin_password") || "1234";
+
+  if (password === null) return;
+
+  if (password !== correctPassword) {
+    alert("❌ كلمة المرور غير صحيحة. لم يتم حذف أي بيانات.");
+    return;
+  }
+
+  if (!confirm("⚠️ كلمة المرور صحيحة. هل أنت متأكد من حذف جميع الأصناف والحركات نهائيًا؟")) {
+    return;
+  }
+
+  // الحذف لا يحدث إلا بعد المرور بالتحققين السابقين
+  db = {items:[], moves:[]};
+  save();
+  alert("✅ تم حذف البيانات بنجاح.");
+  location.reload();
+};
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('label,span,div,p,h3,th').forEach(el=>{
+    if(el.children.length===0){
+      const t=(el.textContent||'').trim();
+      if(t==='الرصيد الافتتاحي'||t==='رصيد افتتاحي'||t==='رصيد البداية') el.textContent='الكمية';
+      if(t==='كود الصنف'||t==='كود المنتج') el.textContent='كود';
+    }
+  });
+});
+</script>
+
+
+<style>
+.archive-code-badge{
+  display:inline-block;
+  margin:6px 0;
+  padding:5px 10px;
+  border-radius:8px;
+  font-weight:700;
+  border:1px solid #d9e1ec;
+  background:#f4f7fb;
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  // Add "الكود" header to archive tables when missing.
+  document.querySelectorAll('table').forEach(table=>{
+    const heading=(table.closest('section,div')?.textContent||'');
+    const headers=[...table.querySelectorAll('thead th')];
+    if(headers.length && !headers.some(h=>(h.textContent||'').trim()==='الكود') &&
+       (heading.includes('الأرشيف') || heading.includes('الصنف'))){
+      const th=document.createElement('th');
+      th.textContent='الكود';
+      headers[0].parentElement.insertBefore(th, headers[0].parentElement.children[1]||null);
+      [...table.querySelectorAll('tbody tr')].forEach((tr,i)=>{
+        const td=document.createElement('td');
+        td.className='archive-code-cell';
+        td.textContent='';
+        tr.insertBefore(td,tr.children[1]||null);
+      });
+    }
+  });
+
+  // Fill code cells/cards from stored inventory data.
+  const dataKeys=['inventory','items','warehouse','storeData','warehouseData','products'];
+  let items=[];
+  for(const k of dataKeys){
+    try{
+      const d=JSON.parse(localStorage.getItem(k));
+      if(Array.isArray(d)){items=d;break;}
+      if(d&&Array.isArray(d.items)){items=d.items;break;}
+      if(d&&Array.isArray(d.products)){items=d.products;break;}
+    }catch(e){}
+  }
+  const findCode=(name)=>{
+    const item=items.find(x=>String(x.name||x.itemName||x['اسم الصنف']||'').trim()===String(name||'').trim());
+    return item ? (item.code||item.itemCode||item.id||item['كود']||item['كود الصنف']||'') : '';
+  };
+
+  document.querySelectorAll('table').forEach(table=>{
+    const headers=[...table.querySelectorAll('thead th')];
+    const codeIndex=headers.findIndex(h=>(h.textContent||'').trim()==='الكود');
+    if(codeIndex<0) return;
+    [...table.querySelectorAll('tbody tr')].forEach(tr=>{
+      const cell=tr.children[codeIndex];
+      if(cell && !cell.textContent.trim()){
+        const nameCell=[...tr.children].find((td,i)=>i!==codeIndex && td.textContent.trim());
+        const code=findCode(nameCell?.textContent||'');
+        cell.textContent=code || '—';
+      }
+    });
+  });
+
+  // Add code to archive cards that contain an item name but no visible code.
+  document.querySelectorAll('.archive-item,.item-card,.card').forEach(card=>{
+    if((card.textContent||'').includes('الكود')) return;
+    const txt=card.textContent||'';
+    const item=items.find(x=>txt.includes(String(x.name||x.itemName||x['اسم الصنف']||'')));
+    if(item){
+      const code=item.code||item.itemCode||item.id||item['كود']||item['كود الصنف'];
+      if(code!==undefined && code!==''){
+        const b=document.createElement('div');
+        b.className='archive-code-badge';
+        b.textContent='الكود: '+code;
+        card.appendChild(b);
+      }
+    }
+  });
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+ document.querySelectorAll('h1').forEach(h=>{
+  if(/أرشيف|مخزن/.test(h.textContent)) h.textContent='نظام إدارة المخزن';
+ });
+});
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js'));
+}
+</script>
+
+</body>
+</html>
